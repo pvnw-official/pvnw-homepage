@@ -8,7 +8,7 @@ window.PVN_CONFIG = {
   // 구글 시트 주소 중간의 긴 ID를 넣으세요.
   // 예) https://docs.google.com/spreadsheets/d/【여기 부분】/edit
   // 비워 두면 사이트에 내장된 기본 내용(assets/js/content-default.js)으로 보입니다.
-  sheetId: '',
+  sheetId: '1yJ5sZ1QH2t9gP_72KehYgXyh68-OwSGQlGVzdkQCVuc',
 
   // 아직 못 받은 자료([A1 …])와 임시 사진을 빨간 표시로 보여줄지.
   // 자료를 다 채운 뒤 공식 공개할 때 false 로 바꾸세요.
