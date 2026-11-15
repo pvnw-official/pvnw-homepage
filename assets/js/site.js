@@ -28,6 +28,13 @@
     return u; // 상대경로
   }
   function isOn(v) { return /^(y|yes|on|true|1|사용|켜기|o)$/i.test(String(v || '').trim()); }
+  function featOn(f, spec) {
+    return String(spec || '').split('|').every(function (k) {
+      k = k.trim();
+      if (!k) return true;
+      return f[k] === undefined ? true : isOn(f[k]);
+    });
+  }
   function isTodo(v) { return /^\s*\[[^\]]*\]\s*$/.test(String(v || '')); }
   function visible(rows) { return (rows || []).filter(function (r) { return String(r['공개여부'] || 'Y').trim().toUpperCase() !== 'N'; }); }
   function $(sel, root) { return (root || document).querySelector(sel); }
@@ -78,58 +85,80 @@
   }
 
   /* ---------- 내용 불러오기 ---------- */
+  var TAB_KEYS = ['features', 'texts', 'images', 'summary', 'info', 'banners', 'works', 'regions', 'history', 'notices', 'finance'];
+  function applyTab(data, k, rows) {
+    if (k === 'features') {
+      rows.forEach(function (r) { if (r['항목']) data.features[r['항목']] = r['사용']; });
+    } else if (k === 'texts') {
+      rows.forEach(function (r) { if (r['키'] && String(r['내용'] || '').trim()) data.texts[r['키']] = r['내용']; });
+    } else if (k === 'images') {
+      rows.forEach(function (r) { if (r['키'] && String(r['사진'] || '').trim()) data.images[r['키']] = { src: r['사진'], alt: r['설명'] }; });
+    } else if (k === 'info') {
+      rows.forEach(function (r) {
+        var key = r['항목'], val = r['내용'] != null ? r['내용'] : r['값'];
+        if (!key) return;
+        if (key in data.features) data.features[key] = val;
+        else data.info[key] = val;
+      });
+    } else data[k] = rows;
+  }
   function loadData() {
     var data = JSON.parse(JSON.stringify(DEF));
     if (!CFG.sheetId) return Promise.resolve(data);
-    var keys = ['info', 'banners', 'works', 'regions', 'history', 'notices', 'finance'];
-    return Promise.all(keys.map(function (k) {
+    return Promise.all(TAB_KEYS.map(function (k) {
       return fetchTab(CFG.tabs[k]).catch(function () { return null; }); // 실패한 탭은 기본 내용 유지
     })).then(function (res) {
-      keys.forEach(function (k, i) {
-        var rows = res[i];
-        if (!rows) return;
-        if (k === 'info') {
-          rows.forEach(function (r) {
-            var key = r['항목'], val = r['내용'] != null ? r['내용'] : r['값'];
-            if (!key) return;
-            if (key in data.features) data.features[key] = val;
-            else data.info[key] = val;
-          });
-        } else data[k] = rows;
-      });
+      TAB_KEYS.forEach(function (k, i) { if (res[i]) applyTab(data, k, res[i]); });
       return data;
     });
   }
+  // 관리자 미리보기: 관리 화면이 보내준 시트 내용(저장 전 포함)으로 그리기
+  function fromTabs(tabs) {
+    var data = JSON.parse(JSON.stringify(DEF));
+    TAB_KEYS.forEach(function (k) {
+      var t = tabs[CFG.tabs[k]];
+      if (t && t.rows) applyTab(data, k, t.rows.map(function (r) {
+        var o = {}; Object.keys(r).forEach(function (h) { o[h] = r[h] == null ? '' : String(r[h]).trim(); }); return o;
+      }));
+    });
+    return data;
+  }
 
   /* ---------- 메뉴 ---------- */
-  function menus(f) {
-    var cms = isOn(f['CMS 정기후원 사용']);
-    var donation = isOn(f['기부금 활용실적 공개']);
+  function menus(data) {
+    var f = data.features;
+    function on(k) { return featOn(f, k); }
+    var works = visible(data.works).map(function (w, k) { return [w['사업명'], 'business.html#work-' + (w['번호'] || k + 1)]; });
+    var regions = visible(data.regions).map(function (r, k) { return [r['국가'], 'region.html#region-' + (k + 1)]; });
     var list = [
-      { key: 'org', label: '기관', href: 'about.html', cols: [
-        { title: '기관소개', href: 'about.html', links: [['피빌네는', 'about.html#about'], ['비전과 가치', 'about.html#values'], ['연혁', 'about.html#history']] },
-        { title: '재정보고', href: 'finance.html', links: [['공시서류', 'finance.html#settlement'], donation ? ['기부금 모금액 및 활용실적', 'finance.html#donation'] : null] }
+      { key: 'org', label: '기관', cols: [
+        on('기관소개 페이지') && { title: '기관소개', href: 'about.html', links: [['피빌네는', 'about.html#about'], on('기관소개: 비전과 가치') && ['비전과 가치', 'about.html#values'], on('기관소개: 연혁') && ['연혁', 'about.html#history']] },
+        on('재정보고 페이지') && { title: '재정보고', href: 'finance.html', links: [on('재정보고: 요약 그래프') && ['한눈에 보는 재정', 'finance.html#summary'], on('재정보고: 공시서류') && ['공시서류', 'finance.html#settlement'], on('기부금 활용실적 공개') && ['기부금 모금액 및 활용실적', 'finance.html#donation']] }
       ] },
-      { key: 'work', label: '사업', href: 'business.html', cols: [
-        { title: '주요 지원 사업', href: 'business.html', links: [['교육환경 개선', 'business.html#work-1'], ['장학 프로그램', 'business.html#work-2'], ['국제 연대 및 교류', 'business.html#work-3'], ['지구 환경·기후 위기 대응', 'business.html#work-4']] },
-        { title: '활동 지역', href: 'region.html', links: [['라오스', 'region.html#region-1'], ['베트남', 'region.html#region-2'], ['동티모르', 'region.html#region-3'], ['태국 · 미얀마', 'region.html#region-4']] }
+      { key: 'work', label: '사업', cols: [
+        on('주요 지원 사업 페이지') && { title: '주요 지원 사업', href: 'business.html', links: works },
+        on('활동 지역 페이지') && { title: '활동 지역', href: 'region.html', links: regions }
       ] },
-      { key: 'support', label: '후원/참여', href: 'support.html', cols: [
-        { title: '후원하기', href: 'support.html', links: [['계좌 후원', 'support.html#account'], cms ? ['CMS 정기후원', 'support.html#regular'] : null, ['기업·단체 후원', 'support.html#corp']] },
-        { title: '기부금영수증', href: 'receipt.html', links: [['발급 안내', 'receipt.html']] }
+      { key: 'support', label: '후원/참여', cols: [
+        on('후원하기 페이지') && { title: '후원하기', href: 'support.html', links: [on('후원하기: 계좌 후원') && ['계좌 후원', 'support.html#account'], on('CMS 정기후원 사용') && ['CMS 정기후원', 'support.html#regular'], on('후원하기: 기업·단체 후원') && ['기업·단체 후원', 'support.html#corp']] },
+        on('기부금영수증 페이지') && { title: '기부금영수증', href: 'receipt.html', links: [['발급 안내', 'receipt.html']] }
       ] },
-      { key: 'news', label: '소식', href: 'news.html', cols: [
-        { title: '공지사항', href: 'news.html', links: [['피빌네 소식과 공지', 'news.html']] }
+      { key: 'news', label: '소식', cols: [
+        on('공지사항 페이지') && { title: '공지사항', href: 'news.html', links: [['피빌네 소식과 공지', 'news.html']] }
       ] }
     ];
-    list.forEach(function (m) { m.cols.forEach(function (c) { c.links = (c.links || []).filter(Boolean); }); });
-    return list;
+    return list.map(function (m) {
+      m.cols = m.cols.filter(Boolean);
+      m.cols.forEach(function (c) { c.links = (c.links || []).filter(Boolean); });
+      m.href = m.cols.length ? m.cols[0].href : '';
+      return m;
+    }).filter(function (m) { return m.cols.length; });
   }
 
   function renderHeader(data, current) {
     var el = $('#site-header');
     if (!el) return;
-    var ms = menus(data.features);
+    var ms = menus(data);
     var nav = ms.map(function (m) {
       var subs = [];
       m.cols.forEach(function (c) {
@@ -155,7 +184,7 @@
           '<svg class="ic-close" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>' +
         '</button>' +
         '<nav id="main-nav" class="main-nav" aria-label="주 메뉴"><ul>' + nav + '</ul></nav>' +
-        '<a class="btn btn-yellow head-cta" href="support.html">후원하기</a>' +
+        (featOn(data.features, '후원하기 페이지') ? '<a class="btn btn-yellow head-cta" href="support.html">후원하기</a>' : '') +
       '</div>' +
       '<div class="mega" hidden><div class="wrap mega-inner"></div></div>';
 
@@ -218,8 +247,8 @@
         '</div>' +
         '<ul class="foot-links">' +
           '<li><a href="privacy.html">개인정보처리방침</a></li>' +
-          '<li><a href="finance.html">재정보고</a></li>' +
-          '<li><a href="support.html">후원하기</a></li>' +
+          (featOn(data.features, '재정보고 페이지') ? '<li><a href="finance.html">재정보고</a></li>' : '') +
+          (featOn(data.features, '후원하기 페이지') ? '<li><a href="support.html">후원하기</a></li>' : '') +
           '<li><a href="https://www.hometax.go.kr" target="_blank" rel="noopener">국세청 홈택스</a></li>' +
         '</ul>' +
       '</div>';
@@ -241,8 +270,43 @@
       n.textContent = v || '';
       if (v && v.indexOf('@') > 0) n.setAttribute('href', 'mailto:' + v);
     });
-    $all('[data-feature]').forEach(function (n) { n.hidden = !isOn(data.features[n.getAttribute('data-feature')]); });
-    $all('[data-feature-off]').forEach(function (n) { n.hidden = isOn(data.features[n.getAttribute('data-feature-off')]); });
+    $all('[data-feature]').forEach(function (n) {
+      var spec = n.getAttribute('data-feature');
+      if (featOn(data.features, spec)) return;
+      if (EDIT) { n.classList.add('pvn-off'); n.setAttribute('data-off-label', '꺼짐 · 홈페이지에 안 보임'); }
+      else n.hidden = true;
+    });
+    $all('[data-feature-off]').forEach(function (n) { if (featOn(data.features, n.getAttribute('data-feature-off'))) n.hidden = true; });
+    $all('.sub-tabs').forEach(function (nav) { if ($all('a', nav).filter(function (x) { return !x.hidden; }).length < 2) nav.hidden = true; });
+  }
+
+  function applyTexts(data) {
+    $all('[data-text]').forEach(function (n) {
+      var v = data.texts[n.getAttribute('data-text')];
+      if (v != null && String(v).trim() !== '') n.innerHTML = String(v).trim().split(/\r?\n/).map(esc).join('<br>');
+    });
+    $all('[data-img]').forEach(function (n) {
+      var v = data.images[n.getAttribute('data-img')];
+      if (!v) return;
+      var u = safeUrl(driveImage(v.src));
+      if (u) n.src = u;
+      if (v.alt) n.alt = v.alt;
+    });
+  }
+  function pageGate(data) {
+    var main = $('main[data-page-feature]');
+    if (!main || featOn(data.features, main.getAttribute('data-page-feature'))) return;
+    if (EDIT) {
+      var bar = document.createElement('div');
+      bar.className = 'pvn-pageoff';
+      bar.textContent = '이 페이지는 꺼져 있어요 — 홈페이지 메뉴에 없고, 주소로 들어오면 \'준비 중\'으로 보입니다.';
+      main.insertBefore(bar, main.firstChild);
+      main.classList.add('pvn-page-dim');
+      return;
+    }
+    main.innerHTML = '<section class="coming"><h1>준비 중인 페이지입니다</h1><p>더 나은 모습으로 곧 찾아뵙겠습니다.</p>' +
+      '<a class="btn btn-green" href="index.html">홈으로</a></section>';
+    main.removeAttribute('data-page-feature');
   }
 
   // 계좌번호 복사
@@ -318,6 +382,7 @@
       h('next').addEventListener('click', function () { i = (i + 1) % slides.length; show(); });
     }
     show();
+    el.__go = function (k) { if (k >= 0 && k < slides.length) { i = k; show(); } };
   };
 
   function bulletList(text) {
@@ -353,34 +418,79 @@
     }).join('');
   };
 
-  function noticeRows(data) {
-    return visible(data.notices).slice().sort(function (a, b) { return String(b['게시일']).localeCompare(String(a['게시일'])); });
+  /* 게시판: 목록을 누르면 상세 화면 (주소 끝 #doc-… 로 구분, 뒤로가기 가능) */
+  function docId(r) {
+    var str = (r['게시일'] || '') + '|' + (r['제목'] || ''), h = 0;
+    for (var i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) | 0;
+    return 'doc-' + (h >>> 0).toString(36);
   }
+  function byDate(rows) {
+    return rows.map(function (r, i) { return [r, i]; })
+      .sort(function (a, b) { return String(b[0]['게시일']).localeCompare(String(a[0]['게시일'])) || a[1] - b[1]; })
+      .map(function (x) { return x[0]; });
+  }
+  function attachBox(url, name) {
+    var d = driveLinks(url);
+    if (!d.view) return '';
+    var isFile = !d.local || /\.(pdf|hwp|hwpx|docx?|xlsx?|zip|jpe?g|png)$/i.test(d.view);
+    if (d.local && !isFile) return '<div class="post-attach"><a class="btn btn-line sm" href="' + esc(d.view) + '">자세히 보기</a></div>';
+    return '<div class="attach"><span class="attach-name">첨부 · ' + esc(name || '첨부파일') + '</span><span class="fin-btns">' +
+      '<a class="btn btn-line sm" href="' + esc(d.view) + '" target="_blank" rel="noopener">보기</a>' +
+      '<a class="btn btn-line sm" href="' + esc(d.download) + '"' + (d.local ? ' download' : '') + '>내려받기</a></span></div>';
+  }
+  // opt: { rows, back(목록 주소), tag(r), body(r), attach(r) }
+  function board(el, opt) {
+    var want = decodeURIComponent(location.hash.slice(1));
+    var idx = -1;
+    opt.rows.forEach(function (r, i) { if (docId(r) === want) idx = i; });
+    if (idx < 0) {
+      el.innerHTML = '<ul class="board">' + opt.rows.map(function (r) {
+        var hasFile = !!driveLinks(opt.attachUrl(r)).view;
+        return '<li><a href="#' + docId(r) + '">' +
+          (opt.tag(r) ? '<span class="b-tag">' + esc(opt.tag(r)) + '</span>' : '') +
+          '<span class="b-title">' + esc(r['제목']) + '</span>' +
+          '<span class="b-meta">' + (hasFile ? '<span class="b-file">첨부</span>' : '') + '<time>' + esc(r['게시일']) + '</time></span></a></li>';
+      }).join('') + '</ul>';
+      return false;
+    }
+    var r = opt.rows[idx], prev = opt.rows[idx - 1], next = opt.rows[idx + 1];
+    el.innerHTML = '<article class="post">' +
+      '<a class="post-back" href="' + opt.back + '">← 목록으로</a>' +
+      '<header class="post-head">' + (opt.tag(r) ? '<span class="b-tag">' + esc(opt.tag(r)) + '</span>' : '') +
+        '<h2>' + esc(r['제목']) + '</h2><p class="post-meta">게시일 <time>' + esc(r['게시일']) + '</time></p></header>' +
+      '<div class="post-body">' + opt.body(r) + '</div>' + opt.attach(r) +
+      '<nav class="post-nav" aria-label="다른 글">' +
+        (prev ? '<a href="#' + docId(prev) + '"><span>이전 글</span>' + esc(prev['제목']) + '</a>' : '') +
+        (next ? '<a href="#' + docId(next) + '"><span>다음 글</span>' + esc(next['제목']) + '</a>' : '') + '</nav>' +
+      '<div class="post-foot"><a class="btn btn-line" href="' + opt.back + '">목록으로</a></div></article>';
+    var host = el.closest('.fin-sec') || el.closest('section');
+    if (host) host.classList.add('detail-host');
+    document.body.setAttribute('data-detail', '1');
+    return true;
+  }
+
+  function noticeRows(data) { return byDate(visible(data.notices)); }
   R.noticesLatest = function (el, data) {
     var rows = noticeRows(data).slice(0, 3);
     var sec = el.closest('section');
-    if (!rows.length) { if (sec) sec.hidden = true; return; }
+    if (!rows.length) { if (sec && !EDIT) sec.hidden = true; el.innerHTML = '<li class="empty">등록된 공지가 없습니다.</li>'; return; }
     el.innerHTML = rows.map(function (n) {
-      return '<li><a href="news.html#n-' + esc(n['게시일']) + '"><span class="n-title">' + esc(n['제목']) +
+      return '<li><a href="news.html#' + docId(n) + '"><span class="n-title">' + esc(n['제목']) +
         '</span><time>' + esc(n['게시일']) + '</time></a></li>';
     }).join('');
   };
   R.noticeList = function (el, data) {
     var rows = noticeRows(data);
     if (!rows.length) { el.innerHTML = '<p class="empty">등록된 공지가 없습니다.</p>'; return; }
-    el.innerHTML = rows.map(function (n) {
-      var link = safeUrl(n['첨부링크']);
-      return '<details class="notice" id="n-' + esc(n['게시일']) + '"><summary><span class="n-title">' + esc(n['제목']) +
-        '</span><time>' + esc(n['게시일']) + '</time></summary><div class="notice-body"><p>' + nl2br(n['내용']) + '</p>' +
-        (link ? (/^https?:/i.test(link) || /\.(pdf|hwp|hwpx|docx?|xlsx?|zip)$/i.test(link)
-          ? '<a class="btn btn-line sm" href="' + esc(link) + '" target="_blank" rel="noopener">첨부파일 보기</a>'
-          : '<a class="btn btn-line sm" href="' + esc(link) + '">자세히 보기</a>') : '') +
-        '</div></details>';
-    }).join('');
-    if (location.hash) { var d = document.getElementById(decodeURIComponent(location.hash.slice(1))); if (d && d.tagName === 'DETAILS') d.open = true; }
+    board(el, {
+      rows: rows, back: '#list',
+      tag: function () { return ''; },
+      attachUrl: function (r) { return r['첨부링크']; },
+      body: function (r) { return lines(r['내용']).map(function (l) { return '<p>' + esc(l) + '</p>'; }).join(''); },
+      attach: function (r) { return attachBox(r['첨부링크'], '첨부파일'); }
+    });
   };
 
-  // 재정보고 — 표시 방식은 자료를 받은 뒤 확정. 지금은 연도별 목록 기본형.
   R.finance = function (el, data) {
     var kind = el.getAttribute('data-kind'); // settlement | donation
     var rows = visible(data.finance).filter(function (r) {
@@ -393,19 +503,13 @@
         '<p class="when">' + (kind === 'settlement' ? '[C1 결산서류 — 국세청 공시 양식]' : '[C2 기부금 모금액 및 활용실적 명세서]') + '</p></div>';
       return;
     }
-    // 게시판형: 제목을 누르면 공고문과 첨부파일이 펼쳐짐 (공지사항과 같은 방식)
-    rows = rows.map(function (r, i) { return [r, i]; }).sort(function (a, b) { return String(b[0]['게시일']).localeCompare(String(a[0]['게시일'])) || a[1] - b[1]; }).map(function (x) { return x[0]; });
-    el.innerHTML = '<div class="fin-board">' + rows.map(function (r, k) {
-      var d = driveLinks(r['파일링크']);
-      var name = r['파일명'] || (r['제목'] + '.pdf');
-      return '<details class="notice"' + (k === 0 ? ' open' : '') + '><summary><span class="n-title"><span class="fin-kind">' + esc(r['연도']) + '년</span>' + esc(r['제목']) + '</span>' +
-        '<time>' + esc(r['게시일']) + '</time></summary><div class="notice-body">' +
-        (r['내용'] ? announce(r['내용']) : '') +
-        (d.view ? '<div class="attach"><span class="attach-name">첨부 · ' + esc(name) + '</span><span class="fin-btns">' +
-          '<a class="btn btn-line sm" href="' + esc(d.view) + '" target="_blank" rel="noopener">보기</a>' +
-          '<a class="btn btn-line sm" href="' + esc(d.download) + '"' + (d.local ? ' download' : '') + '>내려받기</a></span></div>' : '') +
-        '</div></details>';
-    }).join('') + '</div>';
+    board(el, {
+      rows: byDate(rows), back: '#' + kind,
+      tag: function (r) { var y = String(r['연도'] || '').replace(/\s*년\s*$/, ''); return [y ? y + '년' : '', r['구분']].filter(Boolean).join(' · '); },
+      attachUrl: function (r) { return r['파일링크']; },
+      body: function (r) { return r['내용'] ? announce(r['내용']) : ''; },
+      attach: function (r) { return attachBox(r['파일링크'], r['파일명'] || (r['제목'] + '.pdf')); }
+    });
   };
 
   // 공고문: 첫 줄은 제목처럼 크게, 빈 줄은 간격으로 유지
@@ -447,11 +551,47 @@
       if (want) { select(want); if (scroll) el.scrollIntoView({ behavior: 'smooth' }); return true; }
       return false;
     }
+    if (!tabs.length) { el.hidden = true; return; }
     if (!fromHash(false)) select(tabs[0]);
-    window.addEventListener('hashchange', function () { fromHash(true); });
+    if (window.__pvnTabHash) window.removeEventListener('hashchange', window.__pvnTabHash);
+    window.__pvnTabHash = function () { fromHash(true); };
+    window.addEventListener('hashchange', window.__pvnTabHash);
     var link = safeUrl(data.info['CMS 신청 링크']);
     var a = $('#regular-apply');
     if (a) { if (link) a.href = link; else a.removeAttribute('href'); a.classList.toggle('is-disabled', !link); }
+  };
+
+  // 재정 요약(A형): 연도별 수입·지출 막대
+  R.finSummary = function (el, data) {
+    var rows = visible(data.summary).filter(function (r) { return r['연도'] && r['항목']; });
+    function num(v) { return Number(String(v || '').replace(/[^\d.-]/g, '')) || 0; }
+    function won(v) { return v.toLocaleString('ko-KR') + '원'; }
+    var years = rows.map(function (r) { return String(r['연도']); }).filter(function (y, i, a) { return a.indexOf(y) === i; }).sort().reverse();
+    if (!years.length) { el.innerHTML = '<div class="placeholder"><strong>요약 자료를 준비하고 있습니다.</strong></div>'; return; }
+    function draw(y) {
+      var yr = rows.filter(function (r) { return String(r['연도']) === y; });
+      function group(kind) {
+        var g = yr.filter(function (r) { return /수입/.test(r['구분']) === (kind === '수입'); });
+        var total = g.reduce(function (s, r) { return s + num(r['금액']); }, 0);
+        var max = g.reduce(function (m, r) { return Math.max(m, num(r['금액'])); }, 0) || 1;
+        return '<div class="fs-group"><div class="fs-head"><h3>' + kind + '</h3><strong>' + won(total) + '</strong></div><ul class="fs-bars">' +
+          g.map(function (r) {
+            var v = num(r['금액']), pct = total ? Math.round(v / total * 1000) / 10 : 0;
+            return '<li><span class="fs-label">' + esc(r['항목']) + '</span><span class="fs-track"><span class="fs-bar fs-' + (kind === '수입' ? 'in' : 'out') +
+              '" style="width:' + Math.max(2, v / max * 100) + '%"></span></span><span class="fs-val">' + won(v) + ' <small>(' + pct + '%)</small></span></li>';
+          }).join('') + '</ul></div>';
+      }
+      return '<p class="fs-year">' + esc(y) + '년 결산 기준</p><div class="fs-grid">' + group('수입') + group('지출') + '</div>';
+    }
+    var tabs = years.length > 1 ? '<div class="fs-years" role="group" aria-label="연도 선택">' + years.map(function (y, k) {
+      return '<button type="button" class="chip' + (k === 0 ? ' is-on' : '') + '" data-y="' + esc(y) + '">' + esc(y) + '</button>'; }).join('') + '</div>' : '';
+    el.innerHTML = tabs + '<div class="fs-body">' + draw(years[0]) + '</div>';
+    $all('[data-y]', el).forEach(function (b) {
+      b.addEventListener('click', function () {
+        $all('[data-y]', el).forEach(function (x) { x.classList.toggle('is-on', x === b); });
+        $('.fs-body', el).innerHTML = draw(b.getAttribute('data-y'));
+      });
+    });
   };
 
   R.receiptForm = function (el, data) {
@@ -502,22 +642,105 @@
     document.body.appendChild(b);
   }
 
+  /* ---------- 그리기 ---------- */
+  var DATA = null;
+  function routeBoards() {
+    document.body.removeAttribute('data-detail');
+    $all('.detail-host').forEach(function (n) { n.classList.remove('detail-host'); });
+    $all('[data-render="finance"], [data-render="noticeList"]').forEach(function (el) { R[el.getAttribute('data-render')](el, DATA); });
+  }
+  function renderAll(data, current) {
+    DATA = data;
+    renderHeader(data, current);
+    renderFooter(data);
+    pageGate(data);
+    applyTexts(data);
+    fillInfo(data);
+    $all('[data-render]').forEach(function (el) {
+      var fn = R[el.getAttribute('data-render')];
+      if (fn) fn(el, data);
+    });
+    bindCopy();
+    markTodos(document.body);
+    todoBadge();
+  }
+  window.addEventListener('hashchange', function () {
+    if (!DATA) return;
+    var h = location.hash.slice(1);
+    if (/^doc-/.test(h) || document.body.hasAttribute('data-detail') || h === 'list') {
+      routeBoards();
+      var t = /^doc-/.test(h) ? $('.post') : document.getElementById(h === 'list' ? 'main' : h);
+      if (t) t.scrollIntoView();
+    }
+  });
+
+  /* ---------- 관리자 미리보기 모드 (?edit=1, 관리 화면 안에서만) ---------- */
+  var EDIT = /[?&]edit=1(&|$)/.test(location.search) && window.parent !== window;
+  function startEdit(current) {
+    document.documentElement.classList.add('pvn-edit');
+    var snapshot = document.body.innerHTML, drawn = false;
+    function post(msg) { try { window.parent.postMessage(msg, '*'); } catch (e) {} }
+    function draw(data) {
+      var y = window.scrollY;
+      if (drawn) document.body.innerHTML = snapshot;
+      renderAll(data, current);
+      drawn = true;
+      document.documentElement.classList.add('is-ready');
+      window.scrollTo(0, y);
+    }
+    window.addEventListener('message', function (e) {
+      var m = e.data || {};
+      if (m.type === 'pvn-data' && m.tabs) draw(fromTabs(m.tabs));
+      else if (m.type === 'pvn-focus') {
+        var sel = m.kind === 'img' ? '[data-img="' + m.key + '"]' : m.kind === 'info' ? '[data-info="' + m.key + '"],[data-tel="' + m.key + '"],[data-mail="' + m.key + '"]'
+          : m.kind === 'sel' ? m.key
+          : m.kind === 'render' ? '[data-render="' + m.key + '"]' : m.kind === 'feature' ? '[data-feature="' + m.key + '"]' : '[data-text="' + m.key + '"]';
+        var n = null; try { n = $(sel); } catch (x) {}
+        if (n) {
+          n.scrollIntoView({ block: 'center', behavior: 'smooth' });
+          n.classList.remove('pvn-flash'); void n.offsetWidth; n.classList.add('pvn-flash');
+        }
+      } else if (m.type === 'pvn-hash') {
+        setHash(m.hash);
+        setTimeout(function () { var t = /^#doc-/.test(m.hash) ? $('.post') : document.getElementById(m.hash.slice(1)); if (t) t.scrollIntoView(); }, 60);
+      } else if (m.type === 'pvn-hero') {
+        var h = $('[data-render="hero"]'); if (h && h.__go) h.__go(m.index);
+      }
+    });
+    // 미리보기 안의 이동은 방문 기록에 남기지 않음 (관리 화면 뒤로가기가 꼬이지 않게)
+    function setHash(h) {
+      if (location.hash === h) { if (DATA) routeBoards(); return; }
+      history.replaceState(null, '', location.pathname + location.search + h);
+      window.dispatchEvent(new HashChangeEvent('hashchange'));
+    }
+    // 링크는 이동하지 않고, 누른 곳을 관리 화면에 알려줌
+    document.addEventListener('click', function (e) {
+      var a = e.target.closest('a[href]');
+      if (a) { e.preventDefault(); var hr = a.getAttribute('href'); if (hr.charAt(0) === '#') setHash(hr); }
+      var t = e.target.closest('[data-text],[data-img],[data-info],[data-tel],[data-mail],[data-render],[data-feature]');
+      if (!t) return;
+      post({ type: 'pvn-pick',
+        text: t.getAttribute('data-text'), img: t.getAttribute('data-img'),
+        info: t.getAttribute('data-info') || t.getAttribute('data-tel') || t.getAttribute('data-mail'),
+        render: (t.closest('[data-render]') || {}).getAttribute ? t.closest('[data-render]').getAttribute('data-render') : null,
+        feature: (t.closest('[data-feature]') || {}).getAttribute ? t.closest('[data-feature]').getAttribute('data-feature') : null });
+    }, true);
+    post({ type: 'pvn-ready', page: current });
+    // 관리 화면이 응답하지 않으면 저장된 내용으로라도 보여줌
+    setTimeout(function () { if (!drawn) loadData().then(function (d) { if (!drawn) draw(d); }); }, 2500);
+  }
+
   /* ---------- 시작 ---------- */
   window.PVN = {
     init: function (current) {
       if (CFG.markTodo) document.documentElement.classList.add('mark-todo');
+      if (EDIT) return startEdit(current);
       loadData().then(function (data) {
-        renderHeader(data, current);
-        renderFooter(data);
-        fillInfo(data);
-        $all('[data-render]').forEach(function (el) {
-          var fn = R[el.getAttribute('data-render')];
-          if (fn) fn(el, data);
-        });
-        bindCopy();
-        markTodos(document.body);
-        todoBadge();
-        if (location.hash) { var t = document.getElementById(decodeURIComponent(location.hash.slice(1))); if (t) t.scrollIntoView(); }
+        renderAll(data, current);
+        if (location.hash) {
+          var t = /^#doc-/.test(location.hash) ? $('.post') : document.getElementById(decodeURIComponent(location.hash.slice(1)));
+          if (t) t.scrollIntoView();
+        }
         document.documentElement.classList.add('is-ready');
       });
     }

@@ -21,15 +21,15 @@
 <a class="skip" href="#main">본문 바로가기</a>
 <header id="site-header" class="site-header"></header>
 
-<main id="main">
+<main id="main" data-page-feature="후원하기 페이지">
   <div class="sub-head">
     <div class="wrap narrow">
       <span class="crumb">홈 › 후원/참여</span>
-      <h1>후원하기</h1>
-      <p class="desc">당신의 참여는 아이들에게 배움의 기회와 더 밝은 미래를 만들어 줍니다.</p>
+      <h1 data-text="support.01">후원하기</h1>
+      <p class="desc" data-text="support.02">당신의 참여는 아이들에게 배움의 기회와 더 밝은 미래를 만들어 줍니다.</p>
       <nav class="sub-tabs" aria-label="후원/참여 하위 메뉴">
-        <a href="support.html" aria-current="page">후원하기</a>
-        <a href="receipt.html">기부금영수증</a>
+        <a data-feature="후원하기 페이지" href="support.html" aria-current="page">후원하기</a>
+        <a data-feature="기부금영수증 페이지" href="receipt.html">기부금영수증</a>
       </nav>
     </div>
   </div>
@@ -37,16 +37,16 @@
   <section class="section" data-render="supportTabs">
     <div class="wrap narrow">
       <div class="tabs" role="tablist" aria-label="후원 방식">
-        <button class="tab" type="button" role="tab" id="tab-account" aria-controls="panel-account" data-anchor="account">계좌 후원</button>
+        <button class="tab" type="button" role="tab" id="tab-account" aria-controls="panel-account" data-anchor="account" data-feature="후원하기: 계좌 후원">계좌 후원</button>
         <!-- CMS 정기후원: 'CMS 정기후원 사용'이 Y일 때만 보임 -->
         <button class="tab" type="button" role="tab" id="tab-regular" aria-controls="panel-regular" data-anchor="regular" data-feature="CMS 정기후원 사용">CMS 정기후원</button>
-        <button class="tab" type="button" role="tab" id="tab-corp" aria-controls="panel-corp" data-anchor="corp">기업·단체 후원</button>
+        <button class="tab" type="button" role="tab" id="tab-corp" aria-controls="panel-corp" data-anchor="corp" data-feature="후원하기: 기업·단체 후원">기업·단체 후원</button>
       </div>
 
-      <div class="tab-panel" role="tabpanel" id="panel-account" aria-labelledby="tab-account" hidden>
+      <div class="tab-panel" data-feature="후원하기: 계좌 후원" role="tabpanel" id="panel-account" aria-labelledby="tab-account" hidden>
         <div>
-          <h3>후원 계좌</h3>
-          <p>원하시는 금액을 아래 계좌로 보내주세요.</p>
+          <h3 data-text="support.03">후원 계좌</h3>
+          <p data-text="support.04">원하시는 금액을 아래 계좌로 보내주세요.</p>
           <div class="account-box">
             <div>
               <span class="account" id="account-no"><span data-info="후원 은행"></span> <span data-info="후원 계좌번호"></span></span>
@@ -54,36 +54,36 @@
             </div>
             <button class="btn btn-line sm" type="button" data-copy="account-no">계좌번호 복사</button>
           </div>
-          <p class="tip">은행 자동이체를 설정하시면 매달 정기적으로 후원하실 수 있습니다.</p>
+          <p class="tip" data-text="support.05">은행 자동이체를 설정하시면 매달 정기적으로 후원하실 수 있습니다.</p>
         </div>
       </div>
 
-      <div class="tab-panel" role="tabpanel" id="panel-regular" aria-labelledby="tab-regular" hidden>
+      <div class="tab-panel" data-feature="CMS 정기후원 사용" role="tabpanel" id="panel-regular" aria-labelledby="tab-regular" hidden>
         <div>
-          <h3>CMS 정기후원</h3>
-          <p>CMS 자동이체 신청으로 매달 정해진 날 정기후원이 이루어집니다.</p>
+          <h3 data-text="support.06">CMS 정기후원</h3>
+          <p data-text="support.07">CMS 자동이체 신청으로 매달 정해진 날 정기후원이 이루어집니다.</p>
         </div>
-        <a class="btn btn-green" id="regular-apply" target="_blank" rel="noopener">CMS 정기후원 신청</a>
+        <a class="btn btn-green" id="regular-apply" target="_blank" rel="noopener" data-text="support.08">CMS 정기후원 신청</a>
       </div>
 
-      <div class="tab-panel" role="tabpanel" id="panel-corp" aria-labelledby="tab-corp" hidden>
+      <div class="tab-panel" data-feature="후원하기: 기업·단체 후원" role="tabpanel" id="panel-corp" aria-labelledby="tab-corp" hidden>
         <div>
-          <h3>기업·단체 후원</h3>
-          <p>기업·단체 후원은 담당자에게 문의해 주시면 함께할 방법을 안내해 드립니다.</p>
+          <h3 data-text="support.09">기업·단체 후원</h3>
+          <p data-text="support.10">기업·단체 후원은 담당자에게 문의해 주시면 함께할 방법을 안내해 드립니다.</p>
         </div>
-        <a class="btn btn-green" href="#contact">문의하기</a>
+        <a class="btn btn-green" href="#contact" data-text="support.11">문의하기</a>
       </div>
     </div>
   </section>
 
-  <section id="contact" class="section tight-top">
+  <section id="contact" data-feature="후원하기: 문의 안내" class="section tight-top">
     <div class="wrap narrow">
       <div class="contact-box">
         <div>
-          <h2>후원 문의</h2>
+          <h2 data-text="support.12">후원 문의</h2>
           <p class="contact-list">담당 <span data-info="문의 담당"></span> <a data-tel="문의 전화"></a><br>이메일 <a data-mail="이메일"></a></p>
         </div>
-        <a class="btn btn-line" href="receipt.html">기부금영수증 안내</a>
+        <a class="btn btn-line" data-feature="기부금영수증 페이지" href="receipt.html" data-text="support.13">기부금영수증 안내</a>
       </div>
     </div>
   </section>

@@ -21,29 +21,33 @@
 <a class="skip" href="#main">본문 바로가기</a>
 <header id="site-header" class="site-header"></header>
 
-<main id="main">
+<main id="main" data-page-feature="재정보고 페이지">
   <div class="sub-head">
     <div class="wrap narrow">
       <span class="crumb">홈 › 기관</span>
-      <h1>재정보고</h1>
+      <h1 data-text="finance.01">재정보고</h1>
       <nav class="sub-tabs" aria-label="기관 하위 메뉴">
-        <a href="about.html">기관소개</a>
-        <a href="finance.html" aria-current="page">재정보고</a>
+        <a data-feature="기관소개 페이지" href="about.html">기관소개</a>
+        <a data-feature="재정보고 페이지" href="finance.html" aria-current="page">재정보고</a>
       </nav>
     </div>
   </div>
   <section class="section">
     <div class="wrap narrow">
-      <p class="lead" style="margin-bottom:28px">피스빌리지네트워크의 사업계획·결산·재산목록을 공개합니다.</p>
-      <section id="settlement" class="fin-sec">
-        <h2 class="sec-title fin-h">공시서류</h2>
+      <p class="lead" data-board-hide style="margin-bottom:28px" data-text="finance.02">피스빌리지네트워크의 사업계획·결산·재산목록을 공개합니다.</p>
+      <section id="summary" class="fin-sec" data-feature="재정보고: 요약 그래프">
+        <h2 class="sec-title fin-h" data-text="finance.요약">한눈에 보는 재정</h2>
+        <div data-render="finSummary"></div>
+      </section>
+      <section id="settlement" class="fin-sec" data-feature="재정보고: 공시서류">
+        <h2 class="sec-title fin-h" data-text="finance.03">공시서류</h2>
         <div data-render="finance" data-kind="settlement"></div>
       </section>
       <section id="donation" class="fin-sec" data-feature="기부금 활용실적 공개">
-        <h2 class="sec-title fin-h">기부금 모금액 및 활용실적</h2>
+        <h2 class="sec-title fin-h" data-text="finance.04">기부금 모금액 및 활용실적</h2>
         <div data-render="finance" data-kind="donation"></div>
       </section>
-      <a class="more" href="https://www.hometax.go.kr" target="_blank" rel="noopener" style="margin-top:16px">국세청 홈택스 공익법인 공시 조회 →</a>
+      <a class="more" data-board-hide href="https://www.hometax.go.kr" target="_blank" rel="noopener" style="margin-top:16px" data-text="finance.05">국세청 홈택스 공익법인 공시 조회 →</a>
     </div>
   </section>
 </main>

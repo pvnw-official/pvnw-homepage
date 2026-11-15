@@ -16,12 +16,16 @@ window.PVN_CONFIG = {
 
   // 시트의 탭 이름 (시트에서 탭 이름을 바꾸면 여기도 같이 바꾸세요)
   tabs: {
+    features: '기능',
+    texts: '문구',
+    images: '사진',
+    summary: '재정요약',
     info: '기본정보',
     banners: '배너',
     works: '사업',
     regions: '활동지역',
     history: '연혁',
     notices: '공지',
-    finance: '정보공개'
+    finance: '재정보고'
   }
 };
