@@ -151,7 +151,8 @@
           '<span class="brand-en">Peace Village Network</span></span>' +
         '</a>' +
         '<button class="nav-toggle" type="button" aria-expanded="false" aria-controls="main-nav" aria-label="메뉴 열기">' +
-          '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>' +
+          '<svg class="ic-open" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>' +
+          '<svg class="ic-close" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>' +
         '</button>' +
         '<nav id="main-nav" class="main-nav" aria-label="주 메뉴"><ul>' + nav + '</ul></nav>' +
         '<a class="btn btn-yellow head-cta" href="support.html">후원하기</a>' +
@@ -344,6 +345,8 @@
 
   R.history = function (el, data) {
     var rows = visible(data.history);
+    var limit = parseInt(el.getAttribute('data-limit'), 10);
+    if (limit) rows = rows.slice(-limit);
     el.className = el.getAttribute('data-style') === 'timeline' ? 'timeline' : 'history-cards';
     el.innerHTML = rows.map(function (h) {
       return '<li><span class="year">' + esc(h['연도']) + '</span>' + bulletList(h['내용']) + '</li>';
@@ -369,7 +372,9 @@
       var link = safeUrl(n['첨부링크']);
       return '<details class="notice" id="n-' + esc(n['게시일']) + '"><summary><span class="n-title">' + esc(n['제목']) +
         '</span><time>' + esc(n['게시일']) + '</time></summary><div class="notice-body"><p>' + nl2br(n['내용']) + '</p>' +
-        (link ? '<a class="btn btn-line sm" href="' + esc(link) + '" target="_blank" rel="noopener">첨부파일 보기</a>' : '') +
+        (link ? (/^https?:/i.test(link) || /\.(pdf|hwp|hwpx|docx?|xlsx?|zip)$/i.test(link)
+          ? '<a class="btn btn-line sm" href="' + esc(link) + '" target="_blank" rel="noopener">첨부파일 보기</a>'
+          : '<a class="btn btn-line sm" href="' + esc(link) + '">자세히 보기</a>') : '') +
         '</div></details>';
     }).join('');
     if (location.hash) { var d = document.getElementById(decodeURIComponent(location.hash.slice(1))); if (d && d.tagName === 'DETAILS') d.open = true; }

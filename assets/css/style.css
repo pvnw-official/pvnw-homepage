@@ -296,3 +296,15 @@ mark.todo { background: #FDECEC; color: #B42318; border: 1.5px dashed #E5484D; b
 .steps p { margin: 0; color: var(--sub); }
 
 .brand img { width: 40px; height: auto; }
+
+.nav-toggle .ic-close { display: none; }
+.site-header.nav-open .nav-toggle .ic-open { display: none; }
+.site-header.nav-open .nav-toggle .ic-close { display: block; }
+/* 법인 정보 */
+.corp-info { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 32px; margin: 0; border-top: 2px solid var(--ink); }
+.corp-info > div { display: flex; gap: 16px; padding: 14px 4px; border-bottom: 1px solid var(--line); }
+.corp-info dt { flex: none; width: 110px; color: var(--sub); }
+.corp-info dd { margin: 0; font-weight: 500; }
+@media (max-width: 700px) { .corp-info { grid-template-columns: minmax(0, 1fr); } }
+.policy h2 { font-size: 20px; margin: 28px 0 8px; }
+.policy p { margin: 0 0 8px; color: var(--sub); }
