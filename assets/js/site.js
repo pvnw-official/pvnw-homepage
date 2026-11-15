@@ -498,9 +498,9 @@
       return kind === 'settlement' ? isSettle : !isSettle;
     });
     if (!rows.length) {
+      var when = data.info['재정보고 공개 예정'];
       el.innerHTML = '<div class="placeholder"><strong>공개 자료를 준비하고 있습니다.</strong>' +
-        '<p>공개 예정: ' + esc(data.info['재정보고 공개 예정']) + '</p>' +
-        '<p class="when">' + (kind === 'settlement' ? '[C1 결산서류 — 국세청 공시 양식]' : '[C2 기부금 모금액 및 활용실적 명세서]') + '</p></div>';
+        (when && !isTodo(when) ? '<p>공개 예정: ' + esc(when) + '</p>' : '') + '</div>';
       return;
     }
     board(el, {
@@ -602,7 +602,7 @@
 
   /* ---------- 빈칸·임시 사진 표시 ---------- */
   function markTodos(root) {
-    if (!CFG.markTodo) return;
+    if (!CFG.markTodo || !EDIT) return;
     var walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
       acceptNode: function (n) {
         var p = n.parentNode;
@@ -629,7 +629,7 @@
     });
   }
   function todoBadge() {
-    if (!CFG.markTodo) return;
+    if (!CFG.markTodo || !EDIT) return;
     var codes = {};
     $all('mark.todo').forEach(function (m) { if (m.offsetParent !== null) codes[m.textContent] = 1; });
     $all('[data-todo]').forEach(function (m) { codes['사진 ' + m.getAttribute('data-todo')] = 1; });
@@ -733,7 +733,7 @@
   /* ---------- 시작 ---------- */
   window.PVN = {
     init: function (current) {
-      if (CFG.markTodo) document.documentElement.classList.add('mark-todo');
+      if (CFG.markTodo && EDIT) document.documentElement.classList.add('mark-todo');
       if (EDIT) return startEdit(current);
       loadData().then(function (data) {
         renderAll(data, current);
