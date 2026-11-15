@@ -571,17 +571,20 @@
     function draw(y) {
       var yr = rows.filter(function (r) { return String(r['연도']) === y; });
       function group(kind) {
-        var g = yr.filter(function (r) { return /수입/.test(r['구분']) === (kind === '수입'); });
+        var g = yr.filter(function (r) { return kind === '수입' ? /수입/.test(r['구분']) : /지출/.test(r['구분']); });
         var total = g.reduce(function (s, r) { return s + num(r['금액']); }, 0);
         var max = g.reduce(function (m, r) { return Math.max(m, num(r['금액'])); }, 0) || 1;
         return '<div class="fs-group"><div class="fs-head"><h3>' + kind + '</h3><strong>' + won(total) + '</strong></div><ul class="fs-bars">' +
           g.map(function (r) {
             var v = num(r['금액']), pct = total ? Math.round(v / total * 1000) / 10 : 0;
             return '<li><span class="fs-label">' + esc(r['항목']) + '</span><span class="fs-track"><span class="fs-bar fs-' + (kind === '수입' ? 'in' : 'out') +
-              '" style="width:' + Math.max(2, v / max * 100) + '%"></span></span><span class="fs-val">' + won(v) + ' <small>(' + pct + '%)</small></span></li>';
+              '" style="width:' + Math.max(2, v / max * 100) + '%"></span></span><span class="fs-val">' + won(v) + ' <small>(' + (v > 0 && pct < 0.1 ? '0.1% 미만' : pct + '%') + ')</small></span></li>';
           }).join('') + '</ul></div>';
       }
-      return '<p class="fs-year">' + esc(y) + '년 결산 기준</p><div class="fs-grid">' + group('수입') + group('지출') + '</div>';
+      // 이월액은 막대가 아니라 아래 한 줄로 (실제로 들어온 돈·쓴 돈과 섞이지 않게)
+      var carry = yr.filter(function (r) { return /이월/.test(r['구분'] + r['항목']); });
+      return '<p class="fs-year">' + esc(y) + '년 결산 기준</p><div class="fs-grid">' + group('수입') + group('지출') + '</div>' +
+        (carry.length ? '<p class="fs-carry">' + carry.map(function (r) { return '<span>' + esc(r['항목']) + ' <b>' + won(num(r['금액'])) + '</b></span>'; }).join('') + '</p>' : '');
     }
     var tabs = years.length > 1 ? '<div class="fs-years" role="group" aria-label="연도 선택">' + years.map(function (y, k) {
       return '<button type="button" class="chip' + (k === 0 ? ' is-on' : '') + '" data-y="' + esc(y) + '">' + esc(y) + '</button>'; }).join('') + '</div>' : '';
