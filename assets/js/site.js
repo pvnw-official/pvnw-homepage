@@ -108,7 +108,7 @@
     var list = [
       { key: 'org', label: '기관', href: 'about.html', cols: [
         { title: '기관소개', href: 'about.html', links: [['피빌네는', 'about.html#about'], ['비전과 가치', 'about.html#values'], ['연혁', 'about.html#history']] },
-        { title: '재정보고', href: 'finance.html', links: [['결산서류', 'finance.html#settlement'], donation ? ['기부금 모금액 및 활용실적', 'finance.html#donation'] : null] }
+        { title: '재정보고', href: 'finance.html', links: [['공시서류', 'finance.html#settlement'], donation ? ['기부금 모금액 및 활용실적', 'finance.html#donation'] : null] }
       ] },
       { key: 'work', label: '사업', href: 'business.html', cols: [
         { title: '주요 지원 사업', href: 'business.html', links: [['교육환경 개선', 'business.html#work-1'], ['장학 프로그램', 'business.html#work-2'], ['국제 연대 및 교류', 'business.html#work-3'], ['지구 환경·기후 위기 대응', 'business.html#work-4']] },
@@ -384,7 +384,7 @@
   R.finance = function (el, data) {
     var kind = el.getAttribute('data-kind'); // settlement | donation
     var rows = visible(data.finance).filter(function (r) {
-      var isSettle = /결산/.test(r['구분'] || '');
+      var isSettle = !/기부금/.test(r['구분'] || '');
       return kind === 'settlement' ? isSettle : !isSettle;
     });
     if (!rows.length) {
@@ -394,7 +394,7 @@
       return;
     }
     // 게시판형: 제목을 누르면 공고문과 첨부파일이 펼쳐짐 (공지사항과 같은 방식)
-    rows.sort(function (a, b) { return String(b['게시일']).localeCompare(String(a['게시일'])); });
+    rows = rows.map(function (r, i) { return [r, i]; }).sort(function (a, b) { return String(b[0]['게시일']).localeCompare(String(a[0]['게시일'])) || a[1] - b[1]; }).map(function (x) { return x[0]; });
     el.innerHTML = '<div class="fin-board">' + rows.map(function (r, k) {
       var d = driveLinks(r['파일링크']);
       var name = r['파일명'] || (r['제목'] + '.pdf');
